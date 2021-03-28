@@ -7,7 +7,7 @@ Tiny BitTorrent client written in Go. Read the blog post: https://blog.jse.li/po
 ## Install
 
 ```sh
-go get github.com/veggiedefender/torrent-client
+go get github.com/riba2534/torrent-client
 ```
 
 ## Usage
