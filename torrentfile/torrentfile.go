@@ -39,25 +39,26 @@ type bencodeTorrent struct {
 // DownloadToFile downloads a torrent and writes it to a file
 func (t *TorrentFile) DownloadToFile(path string) error {
 	var peerID [20]byte
-	_, err := rand.Read(peerID[:])
+	_, err := rand.Read(peerID[:]) // 利用 golang 内置库，生成一个 20 位的ID
 	if err != nil {
 		return err
 	}
-
+	// 向 Tracker 服务器发起请求获取其他 Peer 的信息
 	peers, err := t.requestPeers(peerID, Port)
 	if err != nil {
 		return err
 	}
-
+	// 构造 p2p 种子信息
 	torrent := p2p.Torrent{
-		Peers:       peers,
-		PeerID:      peerID,
-		InfoHash:    t.InfoHash,
-		PieceHashes: t.PieceHashes,
-		PieceLength: t.PieceLength,
-		Length:      t.Length,
-		Name:        t.Name,
+		Peers:       peers,         // 其他 peer 信息
+		PeerID:      peerID,        // 自己生成的 peerID
+		InfoHash:    t.InfoHash,    // 种子的哈希值
+		PieceHashes: t.PieceHashes, // 每一个块的哈希值
+		PieceLength: t.PieceLength, // 每一个块的长度
+		Length:      t.Length,      // 整个文件的长度
+		Name:        t.Name,        // 名称
 	}
+	// 真正的下载流程，下载的数据先保存在内存中，然后再写入文件
 	buf, err := torrent.Download()
 	if err != nil {
 		return err
@@ -117,6 +118,7 @@ func (i *bencodeInfo) splitPieceHashes() ([][20]byte, error) {
 	return hashes, nil
 }
 
+// 此处做了一层转换，把第三方库的 Struct 转换成自定义的  Struct
 func (bto *bencodeTorrent) toTorrentFile() (TorrentFile, error) {
 	infoHash, err := bto.Info.hash()
 	if err != nil {

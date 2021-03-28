@@ -2,24 +2,23 @@ package peers
 
 import (
 	"encoding/binary"
-	"fmt"
+	"errors"
 	"net"
 	"strconv"
 )
 
-// Peer encodes connection information for a peer
+// Peer 的结构很简单，为 IP:Port 的格式
 type Peer struct {
 	IP   net.IP
 	Port uint16
 }
 
-// Unmarshal parses peer IP addresses and ports from a buffer
+// 解析出真正的 peers 地址
 func Unmarshal(peersBin []byte) ([]Peer, error) {
 	const peerSize = 6 // 4 for IP, 2 for port
 	numPeers := len(peersBin) / peerSize
 	if len(peersBin)%peerSize != 0 {
-		err := fmt.Errorf("Received malformed peers")
-		return nil, err
+		return nil, errors.New("Received malformed peers")
 	}
 	peers := make([]Peer, numPeers)
 	for i := 0; i < numPeers; i++ {

@@ -1,14 +1,14 @@
 package torrentfile
 
 import (
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
 
-	"github.com/riba2534/torrent-client/peers"
-
 	"github.com/jackpal/bencode-go"
+	"github.com/riba2534/torrent-client/peers"
 )
 
 type bencodeTrackerResp struct {
@@ -16,11 +16,13 @@ type bencodeTrackerResp struct {
 	Peers    string `bencode:"peers"`
 }
 
+// 构造向 tarcker 服务器发送的请求参数
 func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, error) {
-	base, err := url.Parse(t.Announce)
+	base, err := url.Parse(t.Announce) // 解析种子中的 Announce 地址
 	if err != nil {
 		return "", err
 	}
+	// 添加协议中规定的请求头
 	params := url.Values{
 		"info_hash":  []string{string(t.InfoHash[:])},
 		"peer_id":    []string{string(peerID[:])},
@@ -34,8 +36,11 @@ func (t *TorrentFile) buildTrackerURL(peerID [20]byte, port uint16) (string, err
 	return base.String(), nil
 }
 
+// 向 tracker 服务器请求，获取其他 peer 的地址信息
 func (t *TorrentFile) requestPeers(peerID [20]byte, port uint16) ([]peers.Peer, error) {
+	// 构造向 tarcker 请求服务器发送的请求url
 	url, err := t.buildTrackerURL(peerID, port)
+	log.Printf("[TorrentFile.requestPeers] buildTrackerURL url=%s", url)
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +52,7 @@ func (t *TorrentFile) requestPeers(peerID [20]byte, port uint16) ([]peers.Peer, 
 	}
 	defer resp.Body.Close()
 
+	// 解析 tarcker 服务器返回的 body，也是用 becode 编码的，需要解析
 	trackerResp := bencodeTrackerResp{}
 	err = bencode.Unmarshal(resp.Body, &trackerResp)
 	if err != nil {

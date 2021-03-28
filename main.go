@@ -15,10 +15,12 @@ func main() {
 	}
 	inPath := os.Args[1]
 	outPath := os.Args[2]
+	// 从 inPath 中解析种子文件变为 torrentfile.TorrentFile 格式
 	tf, err := torrentfile.Open(inPath)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// 进行下载
 	err = tf.DownloadToFile(outPath)
 	if err != nil {
 		log.Fatal(err)
