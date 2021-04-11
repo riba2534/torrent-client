@@ -25,16 +25,16 @@ type Client struct {
 }
 
 func completeHandshake(conn net.Conn, infohash, peerID [20]byte) (*handshake.Handshake, error) {
-	conn.SetDeadline(time.Now().Add(3 * time.Second))
-	defer conn.SetDeadline(time.Time{}) // Disable the deadline
+	conn.SetDeadline(time.Now().Add(3 * time.Second)) // 设置超时时间
+	defer conn.SetDeadline(time.Time{})               // Disable the deadline
 
-	req := handshake.New(infohash, peerID)
-	_, err := conn.Write(req.Serialize())
+	req := handshake.New(infohash, peerID) // 开始握手，用整个文件的哈希值和自己的peerID
+	_, err := conn.Write(req.Serialize())  // 写入协议序列化的结果
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := handshake.Read(conn)
+	res, err := handshake.Read(conn) // 接收响应
 	if err != nil {
 		return nil, err
 	}
@@ -71,14 +71,14 @@ func New(peer peers.Peer, peerID, infoHash [20]byte) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	// 进行握手
 	_, err = completeHandshake(conn, infoHash, peerID)
 	if err != nil {
 		conn.Close()
 		return nil, err
 	}
 
-	bf, err := recvBitfield(conn)
+	bf, err := recvBitfield(conn) // Bitfield 可以理解成一个二进制数组，代表提供数据的一方有哪些块的数据
 	if err != nil {
 		conn.Close()
 		return nil, err

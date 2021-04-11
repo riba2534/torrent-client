@@ -9,24 +9,15 @@ import (
 type messageID uint8
 
 const (
-	// MsgChoke chokes the receiver
-	MsgChoke messageID = 0
-	// MsgUnchoke unchokes the receiver
-	MsgUnchoke messageID = 1
-	// MsgInterested expresses interest in receiving data
-	MsgInterested messageID = 2
-	// MsgNotInterested expresses disinterest in receiving data
-	MsgNotInterested messageID = 3
-	// MsgHave alerts the receiver that the sender has downloaded a piece
-	MsgHave messageID = 4
-	// MsgBitfield encodes which pieces that the sender has downloaded
-	MsgBitfield messageID = 5
-	// MsgRequest requests a block of data from the receiver
-	MsgRequest messageID = 6
-	// MsgPiece delivers a block of data to fulfill a request
-	MsgPiece messageID = 7
-	// MsgCancel cancels a request
-	MsgCancel messageID = 8
+	MsgChoke         messageID = 0 // 阻塞消息接收者
+	MsgUnchoke       messageID = 1 // 解除阻塞消息接收者
+	MsgInterested    messageID = 2 // 表示有兴趣接收数据
+	MsgNotInterested messageID = 3 // 没兴趣接收数据
+	MsgHave          messageID = 4 // 提醒消息接收者，发送者已经下载了一个块
+	MsgBitfield      messageID = 5 // 对发送者已经下载的片段进行编码
+	MsgRequest       messageID = 6 // 向消息接收者请求一个块
+	MsgPiece         messageID = 7 // 传送满足请求的数据块
+	MsgCancel        messageID = 8 // 取消一个请求
 )
 
 // Message stores ID and payload of a message

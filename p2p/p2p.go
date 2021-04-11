@@ -89,8 +89,7 @@ func attemptDownloadPiece(c *client.Client, pw *pieceWork) ([]byte, error) {
 		buf:    make([]byte, pw.length),
 	}
 
-	// Setting a deadline helps get unresponsive peers unstuck.
-	// 30 seconds is more than enough time to download a 262 KB piece
+	// 给下载这个块的超时时间设置为30s，通常情况下，30s下载一个大小为256kb的块绰绰有余
 	c.Conn.SetDeadline(time.Now().Add(30 * time.Second))
 	defer c.Conn.SetDeadline(time.Time{}) // Disable the deadline
 
@@ -130,7 +129,9 @@ func checkIntegrity(pw *pieceWork, buf []byte) error {
 	return nil
 }
 
+// 下载任务
 func (t *Torrent) startDownloadWorker(peer peers.Peer, workQueue chan *pieceWork, results chan *pieceResult) {
+	// 建立连接
 	c, err := client.New(peer, t.PeerID, t.InfoHash)
 	if err != nil {
 		log.Printf("Could not handshake with %s. Disconnecting\n", peer.IP)
@@ -142,28 +143,28 @@ func (t *Torrent) startDownloadWorker(peer peers.Peer, workQueue chan *pieceWork
 	c.SendUnchoke()
 	c.SendInterested()
 
-	for pw := range workQueue {
+	for pw := range workQueue { // 遍历任务队列
 		if !c.Bitfield.HasPiece(pw.index) {
 			workQueue <- pw // Put piece back on the queue
 			continue
 		}
 
 		// Download the piece
-		buf, err := attemptDownloadPiece(c, pw)
+		buf, err := attemptDownloadPiece(c, pw) // 下载数据流程
 		if err != nil {
 			log.Println("Exiting", err)
 			workQueue <- pw // Put piece back on the queue
 			return
 		}
 
-		err = checkIntegrity(pw, buf)
+		err = checkIntegrity(pw, buf) // 校验数据是否有效
 		if err != nil {
 			log.Printf("Piece #%d failed integrity check\n", pw.index)
 			workQueue <- pw // Put piece back on the queue
 			continue
 		}
 
-		c.SendHave(pw.index)
+		c.SendHave(pw.index) // 保存
 		results <- &pieceResult{pw.index, buf}
 	}
 }
@@ -186,25 +187,24 @@ func (t *Torrent) calculatePieceSize(index int) int {
 func (t *Torrent) Download() ([]byte, error) {
 	log.Println("Starting download for", t.Name)
 	// Init queues for workers to retrieve work and send results
-	workQueue := make(chan *pieceWork, len(t.PieceHashes))
-	results := make(chan *pieceResult)
+	workQueue := make(chan *pieceWork, len(t.PieceHashes)) // 任务队列，包含了若干个下载任务
+	results := make(chan *pieceResult)                     // 结果队列，当对应的块下载完成后，就放进结果队列中
 	for index, hash := range t.PieceHashes {
-		length := t.calculatePieceSize(index)
-		workQueue <- &pieceWork{index, hash, length}
+		length := t.calculatePieceSize(index)        // 计算每一个序号所对应的块的长度
+		workQueue <- &pieceWork{index, hash, length} // 把对应任务加入任务队列
 	}
-
 	// Start workers
 	for _, peer := range t.Peers {
-		go t.startDownloadWorker(peer, workQueue, results)
+		go t.startDownloadWorker(peer, workQueue, results) // 主流程，并发取连接各个peer进行不同的块下载
 	}
 
 	// Collect results into a buffer until full
 	buf := make([]byte, t.Length)
 	donePieces := 0
-	for donePieces < len(t.PieceHashes) {
-		res := <-results
-		begin, end := t.calculateBoundsForPiece(res.index)
-		copy(buf[begin:end], res.buf)
+	for donePieces < len(t.PieceHashes) { // 遍历的次数等于下载的块的数量
+		res := <-results                                   // 接收下载的结果
+		begin, end := t.calculateBoundsForPiece(res.index) // 计算下载的数据在文件中的位置
+		copy(buf[begin:end], res.buf)                      // 把下载的数据 copy 到最终的文件中
 		donePieces++
 
 		percent := float64(donePieces) / float64(len(t.PieceHashes)) * 100
@@ -212,6 +212,5 @@ func (t *Torrent) Download() ([]byte, error) {
 		log.Printf("(%0.2f%%) Downloaded piece #%d from %d peers\n", percent, res.index, numWorkers)
 	}
 	close(workQueue)
-
 	return buf, nil
 }

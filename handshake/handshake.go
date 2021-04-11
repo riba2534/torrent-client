@@ -36,25 +36,23 @@ func (h *Handshake) Serialize() []byte {
 // Read parses a handshake from a stream
 func Read(r io.Reader) (*Handshake, error) {
 	lengthBuf := make([]byte, 1)
-	_, err := io.ReadFull(r, lengthBuf)
+	_, err := io.ReadFull(r, lengthBuf) // 先读一个字节
 	if err != nil {
 		return nil, err
 	}
-	pstrlen := int(lengthBuf[0])
-
+	pstrlen := int(lengthBuf[0]) // 响应的第一个字节，转化成 int 代表长度
 	if pstrlen == 0 {
 		err := fmt.Errorf("pstrlen cannot be 0")
 		return nil, err
 	}
 
-	handshakeBuf := make([]byte, 48+pstrlen)
+	handshakeBuf := make([]byte, 48+pstrlen) //再读 48 个字节+协议字节
 	_, err = io.ReadFull(r, handshakeBuf)
 	if err != nil {
 		return nil, err
 	}
 
 	var infoHash, peerID [20]byte
-
 	copy(infoHash[:], handshakeBuf[pstrlen+8:pstrlen+8+20])
 	copy(peerID[:], handshakeBuf[pstrlen+8+20:])
 
@@ -63,6 +61,5 @@ func Read(r io.Reader) (*Handshake, error) {
 		InfoHash: infoHash,
 		PeerID:   peerID,
 	}
-
 	return &h, nil
 }
